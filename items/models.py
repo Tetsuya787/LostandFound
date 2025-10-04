@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from simple_history.models import HistoricalRecords  # pip install django-simple-history
+from simple_history.models import HistoricalRecords
 
 class Item(models.Model):
     STATUS_CHOICES = [('Lost', 'Lost'), ('Found', 'Found'), ('Returned', 'Returned')]
@@ -19,9 +19,29 @@ class Item(models.Model):
         null=True, 
         blank=True
     )
+    
+    # Add the missing fields
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    image_recognition_result = models.TextField(blank=True, null=True)
+    
+    # Add the history tracking
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.name} - {self.status}"
+
+    def soft_delete(self, user=None):
+        """Soft delete the item"""
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save()
+
+    def restore(self):
+        """Restore a soft-deleted item"""
+        self.is_deleted = False
+        self.deleted_at = None
+        self.save()
 
     class Meta:
         indexes = [
